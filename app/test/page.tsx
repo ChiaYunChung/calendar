@@ -16,6 +16,10 @@ export default function Test()
 
 }
 
+
+
+
+
 function Score({setTotalScore,totalScore}:{setTotalScore:React.Dispatch<number>,totalScore:number})
 {
     const [score,setScore]=useState<number>(0)
