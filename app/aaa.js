@@ -1,4 +1,9 @@
 let aaaaa=console.log('aaaaa')
+// let aaaaa=() => console.log('aaaaa')
+
+aaaaa
+
+
 
 function a(a){
     console.log("bbbbb")

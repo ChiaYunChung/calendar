@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useActionState  } from "react";
+import React, { useEffect, useState, useActionState } from "react";
 
 async function submitAction(
   prevState: { message: string },
@@ -26,10 +26,11 @@ async function submitAction(
 
 interface CalenderEvent{
   id: string;
-  title:string;
-  schedule:string;
-  date:string;
-  owner: 'me' | 'partner' | 'both';
+  usern: string;
+  schedule_name:string;
+  schedule_detail:string;
+  schedule_date:string;
+  color?:string;
 }
 
 export default function Home() {
@@ -50,30 +51,49 @@ export default function Home() {
   
   const [showLogin, setShowLogin] = useState<boolean>(false)
   const [isLogin, setIsLogin] = useState<boolean>(false)
+  const [owner, setOwner] = useState<string>("");
+  const [showRegister, setShowRegister] = useState<boolean>(false);
 
-  const [events, setEvents] = useState<CalenderEvent[]>([
-    { id: '1', title: '測試1', schedule: 'aaaaaaa', date: '2026-1-15', owner: 'me' },
-     { id: '2', title: '測試2', schedule: 'bbbbb', date: '2026-1-15', owner: 'partner' },
-  ])
-  const [viewFilter, setViewFilter] = useState<'all' | 'me' | 'partner'>('all');
+  useEffect(()=>{
+    console.log("hflhbbhwab",owner)
+  },[owner])
+
+  const [events, setEvents] = useState<CalenderEvent[]>([])
+
+  const [viewFilter, setViewFilter] = useState<string>('all');
+
+  const [gender,setGender]=useState<string>("");
 
   const handleAddEvent = (event: CalenderEvent) => {
+    console.log("新增行程:", event);
     setEvents(prevEvents => [...prevEvents, event])
+    // console.log("hguunciu",events)
     SetShowDetails(false)
   }
 
-  const handleDeleteEvent = (id: string) => {
-    setEvents(prev => prev.filter(e => e.id !== id));
-  }
-
-  const handleLoginSuccess = () => {
-    console.log("收到登入成功訊號，更新狀態...");
-    setIsLogin(true)
-    setShowLogin(false)
-  }
+  useEffect(() => {
+  console.log("目前 events:", events)
   
-  const handleSignOut = () => {
-    setIsLogin(false)
+}, [events])
+
+
+  const handleDeleteEvent = async (id: string) => {
+    const res = await fetch('/api/deleteSchedule', {
+      method: 'POST', // 或是 'DELETE'，看你後端習慣
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+          id: id, 
+          owner:owner
+        }), // 把要刪除的 ID 傳過去
+    });
+    const resJson=await res.json();
+    console.log("刪除行程回應:", resJson.data.status);
+    if(resJson.data.status==="success"){
+      setEvents(prev => prev.filter(e => e.id !== id));
+    }
+    else{
+      alert("刪除失敗，無權限刪除此行程");
+    }
   }
 
   const handlePrevMonth = () => {
@@ -100,6 +120,7 @@ export default function Home() {
   {
     const day = data[i][j]
     if (day === 0) return; // 空格不處理
+    if(isLogin)
     SetShowDetails(prev=>!prev)
     setScheduleData(`${i} ${j}`)
     setScheduleDate({
@@ -113,18 +134,32 @@ export default function Home() {
     setData(buildCalendar(currentYear, currentMonth))
   }, [currentYear, currentMonth])
 
+  const signOut = async () => {
+    const res=await fetch('/api/logout',{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        owner:owner,
+      })
+    });
+    setIsLogin(false);
+    window.location.reload();
+  };
+
   return (
     <div className="w-full min-h-screen h-screen flex justify-center relative">
       <div className="absolute top-5 right-5">
         {isLogin ? (
-          <button 
-            onClick={handleSignOut} 
+          <button
+          type="button"
+            onClick={signOut}
             className="px-6 py-2 bg-blue-700 text-white font-medium rounded-full shadow-md hover:bg-blue-300 transition-colors duration-200"
           >
             Sign Out
           </button>
         ) : (
           <button 
+          type="button"
             onClick={() => setShowLogin(true)} 
             className="px-6 py-2 bg-blue-600 text-white font-medium rounded-full shadow-md hover:bg-blue-700 transition-colors duration-200"
           >
@@ -133,28 +168,29 @@ export default function Home() {
         )}
       </div>
       <div className="absolute top-5 left-5">
-          <FilterCheckbox 
-            label="顯示全部" 
-            isActive={viewFilter === 'all'} 
-            onClick={() => setViewFilter('all')}
-            activeColor="bg-gray-600"
-          />
-          <FilterCheckbox 
-            label="只看我" 
-            isActive={viewFilter === 'me'} 
-            onClick={() => setViewFilter('me')}
-            activeColor="bg-blue-500"
-          />
-          <FilterCheckbox 
-            label="只看對方" 
-            isActive={viewFilter === 'partner'} 
-            onClick={() => setViewFilter('partner')}
-            activeColor="bg-pink-500"
-          />
-        </div>
+        <FilterCheckbox 
+          label="顯示全部" 
+          isActive={viewFilter === 'all'} 
+          onClick={() => setViewFilter('all')}
+          activeColor="bg-gray-600"
+        />
+        <FilterCheckbox 
+          label="只看我" 
+          isActive={viewFilter === 'male'}
+          onClick={() => setViewFilter('male')}
+          activeColor={gender==='male'?`bg-blue-500`:'bg-pink-500'}
+        />
+        <FilterCheckbox 
+          label="只看對方" 
+          isActive={viewFilter === 'female'} 
+          onClick={() => setViewFilter('female')}
+          activeColor={gender==='male'?`bg-pink-500`:'bg-blue-500'}
+        />
+      </div>
       <div className="w-full pt-[50px] flex flex-col items-center">
         <div className="flex items-center justify-between w-[50%] mb-4 px-4">
            <button 
+           type="button"
              onClick={handlePrevMonth}
              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 font-bold"
            >
@@ -164,25 +200,103 @@ export default function Home() {
              {currentYear} 年 {currentMonth} 月
            </div>
            <button 
+           type="button"
              onClick={handleNextMonth}
              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 font-bold"
            >
              下個月 &gt;
            </button>
         </div>
-        <Row data={data2}></Row>
-        {Week(data,(i,j)=>HandleShowColumn(i,j), events, currentYear, currentMonth, viewFilter)}
-        {showDetails&& scheduleDate&&<Holder scheduleData={scheduleData} scheduleDate={scheduleDate} 
-        SetShowDetails={SetShowDetails} onAddEvent={handleAddEvent} events={events} onDeletEvent={handleDeleteEvent}></Holder>}
-        {showLogin&&<Login SignIn={()=>setShowLogin(false)} isLogin={handleLoginSuccess}></Login>}
+        <Row gender={gender} data={data2}></Row>
+        {Week(gender,data,(i,j)=>HandleShowColumn(i,j), events, currentYear, currentMonth, viewFilter)}
+        {showDetails&& scheduleDate&&<Holder scheduleData={scheduleData} scheduleDate={scheduleDate} SetShowDetails={SetShowDetails} 
+        onAddEvent={handleAddEvent} events={events} onDeletEvent={handleDeleteEvent} owner={owner} gender={gender}></Holder>}
+        {showLogin&&<Login setGender={setGender} setIsLogin={(status)=>setIsLogin(status)} setShowLogin={(e)=>setShowLogin(e)} 
+        setOwner={(e)=>setOwner(e)} setEvents={setEvents} setShowRegister={setShowRegister}></Login>}
+        {showRegister&&<Register setShowRegister={setShowRegister} setShowLogin={setShowLogin}></Register>}
       </div>
     </div>
   );
 }
 
-function FilterCheckbox({ label, isActive, onClick, activeColor }: { label: string; isActive: boolean; onClick: () => void; activeColor: string }) {
+function Register({setShowRegister, setShowLogin}: 
+  {setShowRegister:React.Dispatch<React.SetStateAction<boolean>>, setShowLogin:React.Dispatch<React.SetStateAction<boolean>>}) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        account: (e.currentTarget as HTMLFormElement).account.value,
+        password: (e.currentTarget as HTMLFormElement).password.value,
+        gender: (e.currentTarget as HTMLFormElement).gender.value,
+      })
+    });
+    const json=await res.json();
+    console.log("註冊回應:", json.data.status);
+    setShowRegister(false);
+    setShowLogin(false);
+  }
+  
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center transition-opacity">
+      <div className="bg-white w-[90%] max-w-sm p-8 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in duration-200">
+        <div className="text-center mb-8">
+          <div className="text-2xl font-bold text-gray-800">註冊新帳號</div>
+          <p className="text-sm text-gray-500 mt-2">請輸入您的帳號密碼以註冊</p>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+          <input
+            name="account"
+            placeholder="Account"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 placeholder:text-gray-400"
+          /><br></br>
+          <input
+            name="password"
+            placeholder="Password"
+            type="password"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 placeholder:text-gray-400"
+          />
+          <div>
+          <input
+            type="radio"
+            name="gender"
+            value="male"
+            className="mr-2"
+            />
+          男性
+          <input
+            type="radio"
+            name="gender"
+            value="female"
+            className="mr-2"
+          />
+          女性
+          </div>
+          <button
+            type="submit"
+            className="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all duration-200"
+            >
+            Register
+          </button>
+        </form>
+        <button
+        type="button"
+          onClick={() => { setShowLogin(false); setShowRegister(false); }}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+        >
+          X
+        </button>
+      </div>
+    </div>
+    )
+  }
+
+function FilterCheckbox({ label, isActive, onClick, activeColor }:
+  { label: string; isActive: boolean; onClick: () => void; activeColor: string }) {
   return (
     <button
+    type="button"
       onClick={onClick}
       className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors group"
     >
@@ -212,16 +326,51 @@ function FilterCheckbox({ label, isActive, onClick, activeColor }: { label: stri
   )
 }
 
-function Login({SignIn, isLogin}:{SignIn:()=>void, isLogin:()=>void})
+function Login({setGender,setIsLogin, setShowLogin, setOwner, setEvents, setShowRegister}:
+  {setGender:React.Dispatch<React.SetStateAction<string>>,setIsLogin:React.Dispatch<React.SetStateAction<boolean>>,setShowLogin:React.Dispatch<React.SetStateAction<boolean>>,
+    setOwner:React.Dispatch<React.SetStateAction<string>>, setEvents:React.Dispatch<React.SetStateAction<CalenderEvent[]>>,
+  setShowRegister:React.Dispatch<React.SetStateAction<boolean>>})
 {
   // 建立一個專門處理送出的函式
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     // 1. 【關鍵】阻止瀏覽器預設的送出行為 (這行會解決你的錯誤)
     e.preventDefault(); 
-    
-    // 2. 執行你的模擬登入邏輯
-    console.log("執行登入...");
-    isLogin(); // 更新父元件狀態 (變更為已登入)
+    const res=await fetch('/api/login',{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        account:(e.currentTarget as HTMLFormElement).account.value,
+        password:(e.currentTarget as HTMLFormElement).password.value,
+      })
+    });
+    console.log("登入回應:", res);
+    const json = await res.json();
+    console.log(json.data);
+    setIsLogin(true); // 更新父元件狀態 (變更為已登入)
+    setOwner(json.data.data.username)
+    setShowLogin(false)
+    setGender(json.data.data.color)
+    // console.log(`asdasdasd: ${json.data.data.color}`);
+    // console.log(`asdasdasd: ${json.data.data}`);
+    if(json.data.data==="沒有註冊"){
+      alert("沒有註冊，請先註冊帳號");
+      setIsLogin(false);
+      setShowRegister(true);
+      return;
+    }
+    else{
+      const data=await fetch('/api/getSchedule',{
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({
+          owner:json.data.data,
+        })
+      });
+      const dataJson=await data.json();
+      // setEvents((prev)=>[...prev,...dataJson.data.scheduleList])
+      setEvents(dataJson.data.scheduleList)
+      console.log("取得行程回應:", dataJson);
+    }
   };
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center transition-opacity">
@@ -242,44 +391,75 @@ function Login({SignIn, isLogin}:{SignIn:()=>void, isLogin:()=>void})
             type="password" 
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all duration-200 placeholder:text-gray-400"
           />
-          <button 
-            type="submit" 
-            className="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all duration-200"
+            <button 
+              type="submit" 
+              className="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all duration-200"
+            >
+              Sign In
+            </button>
+          </form>
+          <button
+          type="button"
+            onClick={() => setShowRegister(true)}
           >
-            Sign In
+            註冊帳號
           </button>
-          <button type="button" onClick={SignIn} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
+          <button 
+          type="button"
+            onClick={() => setShowLogin(false)} 
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+          >
             X
           </button>
-        </form>
       </div>
     </div>
   )
 }
 
-function Holder({scheduleData, scheduleDate, SetShowDetails, onAddEvent, events, defaultOwner = 'me', onDeletEvent}:
+function Holder({scheduleData, scheduleDate, SetShowDetails, onAddEvent, events, onDeletEvent, owner,gender}:
   {SetShowDetails:React.Dispatch<React.SetStateAction<boolean>>,scheduleData:string; 
     scheduleDate:{ year: number; month: number; day: number }; onAddEvent:(event: CalenderEvent) => void; events:CalenderEvent[];
-    defaultOwner?: 'me' | 'partner' | 'both'; onDeletEvent:(id:string)=>void;})
+    onDeletEvent:(id:string)=>void; owner:string,gender:string})
 {
   const [state, action, isPending] = useActionState((prev: { message: string },formdata:FormData)=>submitAction(prev,formdata,SetShowDetails)
   ,{ message: '' }
   )
-  const dateKey = `${scheduleDate.year}-${scheduleDate.month}-${scheduleDate.day}`;
-  const todaysEvents = events.filter(e => e.date === dateKey);
-  const [owner, setOwner] = useState<'me' | 'partner' | 'both'>(defaultOwner);
-  const handleSubmit = (e: React.FormEvent) => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const dateKey = `${scheduleDate.year}-${pad(scheduleDate.month)}-${pad(scheduleDate.day)}`;
+  console.log("aaaaaaaaaa:", events);
+  const todaysEvents = events.filter(e => e.schedule_date === dateKey);
+  console.log("bbbbb:", todaysEvents);
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
-    
-    // 呼叫父元件的儲存工具
-    onAddEvent({
-      id: Date.now().toString(), // 用時間當 ID
-      title: formData.get('name') as string,
-      schedule: formData.get('schedule') as string,
-      date: `${scheduleDate.year}-${scheduleDate.month}-${scheduleDate.day}`, // 產生 Key
-      owner: owner,
+    const res = await fetch('/api/saveSchedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: formData.get('name'),
+        schedule: formData.get('schedule'),
+        year: formData.get('year'),
+        month: formData.get('month'),
+        day: formData.get('day'),
+        owner: owner,
+      })
     });
+    console.log("儲存行程回應:", res);
+    const json = await res.json();
+    console.log(json.data.status);
+    if(json.data.status==="success"){
+      // 呼叫父元件的儲存工具
+      onAddEvent({
+        // id: Date.now().toString(), // 用時間當 ID
+        id: json.data.id,
+        schedule_name: formData.get('name') as string,
+        schedule_detail: formData.get('schedule') as string,
+        schedule_date: `${scheduleDate.year}-${pad(scheduleDate.month)}-${pad(scheduleDate.day)}`, // 產生 Key
+        usern: owner,
+        color: gender,
+      });
+    }
+    console.log("bbbbbbbbbbbbbbbbbbbbbb:",json.data.color);
   };
   return(
     <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white p-8 rounded-2xl shadow-2xl border border-gray-100 z-50" >
@@ -294,15 +474,16 @@ function Holder({scheduleData, scheduleDate, SetShowDetails, onAddEvent, events,
             <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
               {todaysEvents.map((event: any) => (
                 <div key={event.id} className={`relative border-l-4 p-3 rounded shadow-sm bg-white border border-gray-100
-                  ${event.owner === 'me' ? 'border-l-blue-500' : ''}
-                  ${event.owner === 'partner' ? 'border-l-pink-500' : ''}
-                  ${event.owner === 'both' ? 'border-l-purple-600' : ''}
+                  ${event.gender === 'male' ? 'border-l-blue-500' : ''}
+                  ${event.gender === 'female' ? 'border-l-pink-500' : ''}
+                  ${event.usern === 'both' ? 'border-l-purple-600' : ''}
                 `}>
-                  <div className="font-bold text-gray-800 text-sm pr-6">{event.title}</div>
-                  {event.schedule && (<div className="text-xs text-gray-600 mt-1">{event.schedule}</div>)}
+                  <div className="font-bold text-gray-800 text-sm pr-6">{event.schedule_name}</div>
+                  {event.schedule_detail && (<div className="text-xs text-gray-600 mt-1">{event.schedule_detail}</div>)}
                   
                   {/* ★ 刪除按鈕 */}
                   <button 
+                  type="button"
                     onClick={() => onDeletEvent(event.id)}
                     className="absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1"
                     title="刪除"
@@ -317,43 +498,7 @@ function Holder({scheduleData, scheduleDate, SetShowDetails, onAddEvent, events,
           )}
           <p className="text-sm text-gray-500 mt-1">新增您的行程規劃</p>
       </div>
-      <div>
-          <label className="block text-xs font-bold text-gray-600 uppercase mb-2 ml-1">這是誰的行程？</label>
-          <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-            {/* 按鈕: 我 */}
-            <button
-              type="button" // 重要！一定要加 type="button" 避免變成 submit
-              onClick={() => setOwner('me')}
-              className={`flex-1 py-2 rounded text-sm font-bold transition-all ${
-                owner === 'me' ? 'bg-white text-blue-600 shadow' : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              我
-            </button>
-            
-            {/* 按鈕: 對方 */}
-            <button
-              type="button"
-              onClick={() => setOwner('partner')}
-              className={`flex-1 py-2 rounded text-sm font-bold transition-all ${
-                owner === 'partner' ? 'bg-white text-pink-500 shadow' : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              對方
-            </button>
-
-            {/* 按鈕: 共同 */}
-            <button
-              type="button"
-              onClick={() => setOwner('both')}
-              className={`flex-1 py-2 rounded text-sm font-bold transition-all ${
-                owner === 'both' ? 'bg-white text-purple-600 shadow' : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              共同
-            </button>
-          </div>
-        </div>
+      
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         {/* action={action} */}
         <input type="hidden" name="year" value={scheduleDate.year} />
@@ -390,26 +535,30 @@ function Holder({scheduleData, scheduleDate, SetShowDetails, onAddEvent, events,
   )
 }
 
-function Row({data, HandleShowColumn, events, year, month, viewFilter}
-  :{data:(number|string)[],HandleShowColumn?: (colIndex: number) => void, events?:CalenderEvent[], year?:number, month?:number, viewFilter?:string})    
+function Row({data, HandleShowColumn, events, year, month, viewFilter,gender}
+  :{gender:string,data:(number|string)[],HandleShowColumn?: (colIndex: number) => void, events?:CalenderEvent[], year?:number, month?:number, viewFilter?:string})    
 {
   
   return (
     <div className=" w-[50%] h-[10vh] bg-gray-300 flex col-auto">
-      {ArrangeDate(data,(j)=>HandleShowColumn?.(j), events, year, month, viewFilter)}
+      {ArrangeDate(gender,data,(j)=>HandleShowColumn?.(j), events, year, month, viewFilter)}
     </div>
   )
 }
 
-function Colum({date, HandleShowColumn, events, year, month, viewFilter}
-  :{date:number|string,HandleShowColumn:()=>void, events?:CalenderEvent[], year?:number, month?:number, viewFilter?:string})
+function Colum({date, HandleShowColumn, events, year, month, viewFilter,gender}
+  :{date:number|string,HandleShowColumn:()=>void, events?:CalenderEvent[], year?:number, month?:number, viewFilter?:string,gender:String})
 {
-  const dateKey = `${year}-${month}-${date}`;
-  const todaysEvents = events ? events.filter((e: any) => e.date === dateKey) : [];
+  
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  // const dateKey = `${year}-${month}-${date}`;
+  const dateKey = `${year}-${pad(month || 0)}-${pad(Number(date))}`;
+  const todaysEvents = events ? events.filter((e: any) => e.schedule_date === dateKey) : [];
   const visibleEvents = todaysEvents.filter((event: any) => {
     if (viewFilter === 'all') return true;
-    if (viewFilter === 'me') return event.owner === 'me' || event.owner === 'both';
-    if (viewFilter === 'partner') return event.owner === 'partner' || event.owner === 'both';
+    if (viewFilter === 'male') return event.color ===gender ? true:false;
+    if (viewFilter === 'female') return event.color !==gender ? true:false;
+
     return false;
   });
   return(
@@ -419,11 +568,11 @@ function Colum({date, HandleShowColumn, events, year, month, viewFilter}
         {visibleEvents.map((event: any) => (
           <div 
             key={event.id}
-            title={event.title} // 滑鼠移過去顯示標題
+            title={event.schedule_name} // 滑鼠移過去顯示標題
             className={`w-2 h-2 rounded-full 
-              ${event.owner === 'me' ? 'bg-blue-500' : ''}
-              ${event.owner === 'partner' ? 'bg-pink-500' : ''}
-              ${event.owner === 'both' ? 'bg-purple-600' : ''}
+              ${event.color === 'male' ? 'bg-blue-500' : ''}
+              ${event.color === 'female' ? 'bg-pink-500' : ''}
+              ${event.color === 'both' ? 'bg-purple-600' : ''}
             `}
           />
         ))}
@@ -432,19 +581,19 @@ function Colum({date, HandleShowColumn, events, year, month, viewFilter}
   )
 }
 
-function ArrangeDate(date:(number|string)[], HandleShowColumn:(colIndex: number) => void, events?:CalenderEvent[], year?:number, month?:number, viewFilter?:string)
+function ArrangeDate(gender:string,date:(number|string)[], HandleShowColumn:(colIndex: number) => void, events?:CalenderEvent[], year?:number, month?:number, viewFilter?:string)
 {
   return date.map((val,index)=>{
-    return val!==0? <Colum date={val} key={index} HandleShowColumn={()=>HandleShowColumn(index)} events={events} year={year} month={month} viewFilter={viewFilter}></Colum> 
-    :<Colum date={" "} key={index} HandleShowColumn={()=>HandleShowColumn(index)} events={events} year={year} month={month} viewFilter={viewFilter}></Colum>
+    return val!==0? <Colum gender={gender} date={val} key={index} HandleShowColumn={()=>HandleShowColumn(index)} events={events} year={year} month={month} viewFilter={viewFilter}></Colum> 
+    :<Colum gender={gender} date={" "} key={index} HandleShowColumn={()=>HandleShowColumn(index)} events={events} year={year} month={month} viewFilter={viewFilter}></Colum>
   })
 }
 
-function Week(week:number[][], HandleShowColumn: (colIndex: number,rawIndex:number) => void, 
+function Week(gender:string,week:number[][], HandleShowColumn: (colIndex: number,rawIndex:number) => void, 
 events:CalenderEvent[], year:number, month:number, viewFilter:string)
 {
   return week.map((val,index)=>{
-    return <Row data={val} key={index} HandleShowColumn={(j)=>HandleShowColumn(index,j)} 
+    return <Row gender={gender} data={val} key={index} HandleShowColumn={(j)=>HandleShowColumn(index,j)} 
     events={events} year={year} month={month} viewFilter={viewFilter}></Row>
   })
 }
