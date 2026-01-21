@@ -1,9 +1,7 @@
 // server-side Node runtime，使用 ws 套件作為 client
 import { NextRequest, NextResponse } from "next/server";
 import WebSocket from "ws"; // <-- 使用 ws 套件
-
 export const runtime = "nodejs";
-
 export async function POST(req: NextRequest): Promise<Response> {
   try {
     const body = await req.json();
