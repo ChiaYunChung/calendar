@@ -1,0 +1,52 @@
+services:
+  backend:
+    image: python:3.10-slim
+    container_name: python-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=calander
+      - DB_USER=app_user
+      - DB_PASSWORD=app_password
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             python server1.py"
+
+  frontend:
+    image: node:20-alpine
+    container_name: nextjs-frontend
+    working_dir: /workingdir
+    volumes:
+      - ./calendar:/workingdir
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_WS_URL=http://backend:8888
+    depends_on:
+      - backend
+    command: sh -c "npm install && npm run dev"
+
+  db:
+      image: mysql:8.4
+      container_name: mysql-db
+      ports:
+        - "3306:3306"
+      environment:
+        MYSQL_ROOT_PASSWORD: rootpassword
+        MYSQL_DATABASE: calander
+        MYSQL_USER: app_user
+        MYSQL_PASSWORD: app_password
+      volumes:
+        - mysql_data:/var/lib/mysql
+        - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  node_modules: {}
+  mysql_data: {}

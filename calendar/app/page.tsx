@@ -350,7 +350,7 @@ function Login({setGender,setIsLogin, setShowLogin, setOwner, setEvents, setShow
     setOwner(json.data.data.username)
     setShowLogin(false)
     setGender(json.data.data.color)
-    // console.log(`asdasdasd: ${json.data.data.color}`);
+    console.log(`asdasdasd: ${json.data.data.username}`);
     // console.log(`asdasdasd: ${json.data.data}`);
     if(json.data.data==="沒有註冊"){
       alert("沒有註冊，請先註冊帳號");
